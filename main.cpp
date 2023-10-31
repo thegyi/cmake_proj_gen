@@ -38,7 +38,7 @@ int main(int argc, char const *argv[]) {
   std::string projectType = "executable";
   std::string projectName = "myProject";
   std::string targetDir = ".";
-  std::string templateDir = "/home/thegyi/templates";
+  std::string templateDir = "/home/templates";
 
   boost::program_options::options_description desc("Allowed options");
   desc.add_options()("help", "produce help message")(
