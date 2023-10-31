@@ -38,20 +38,20 @@ int main(int argc, char const *argv[]) {
   std::string projectType = "executable";
   std::string projectName = "myProject";
   std::string targetDir = ".";
-  std::string templateDir = "/home/templates";
+  std::string templateDir = "/etc/cmake_project_generator/templates";
 
   boost::program_options::options_description desc("Allowed options");
   desc.add_options()("help", "produce help message")(
       "standard,s",
       boost::program_options::value<std::string>(&standard)->default_value(
-          "11"),
+          "17"),
       "c++ standard (11,17,20,23)")(
       "name,n", boost::program_options::value<std::string>(),
       "name of the project")(
       "type,t",
       boost::program_options::value<std::string>(&projectType)
           ->default_value("executable"),
-      "type of the project (executable, library)")(
+      "type of the project (executable, static_lib, shared_lib)")(
       "output,o",
       boost::program_options::value<std::string>(&targetDir)
           ->default_value("."),
@@ -81,6 +81,9 @@ int main(int argc, char const *argv[]) {
   if (vm.count("name")) {
     projectName = vm["name"].as<std::string>();
   }
+  if (vm.count("type")) {
+    projectType = vm["type"].as<std::string>();
+  }
 
   std::filesystem::path targetDirPath(targetDir);
   if (!std::filesystem::exists(targetDir)) {
@@ -94,30 +97,26 @@ int main(int argc, char const *argv[]) {
   if (!std::filesystem::exists(targetIncludeDirPath)) {
     std::filesystem::create_directory(targetIncludeDirPath);
   }
-  try {
-    std::filesystem::copy(templateDir + "/main.cpp", targetSourceDirPath,
-                          std::filesystem::copy_options::overwrite_existing);
-  } catch (std::filesystem::__cxx11::filesystem_error &ex) {
-    std::cerr << ex.what() << std::endl;
-  }
-  try {
-    std::filesystem::copy(templateDir + "/main.h", targetIncludeDirPath,
-                          std::filesystem::copy_options::overwrite_existing);
-  } catch (std::filesystem::__cxx11::filesystem_error &ex) {
-    std::cerr << ex.what() << std::endl;
-  }
 
-  try {
-    std::filesystem::copy(templateDir + "/CMakeLists.txt", targetDirPath,
-                          std::filesystem::copy_options::overwrite_existing);
-  } catch (std::filesystem::__cxx11::filesystem_error &ex) {
-    std::cerr << ex.what() << std::endl;
-  }
   std::filesystem::path targetCMakeListsPath(targetDir + "/CMakeLists.txt");
   std::vector<std::pair<std::string, std::string>> templateValues;
   templateValues.emplace_back("%PROJECT_NAME%", projectName);
   templateValues.emplace_back("%CXX_STANDARD%", standard);
-  replaceAll(templateDir + "/CMakeLists.txt", targetCMakeListsPath,
-             templateValues);
+  replaceAll(templateDir + "/" + projectType + "/CMakeLists.txt",
+             targetCMakeListsPath, templateValues);
+
+  if (projectType == "executable") {
+    std::filesystem::copy(templateDir + "/" + projectType + "/" + "main.cpp",
+                          targetSourceDirPath,
+                          std::filesystem::copy_options::overwrite_existing);
+  } else if (projectType == "static_lib" || projectType == "shared_lib") {
+    std::filesystem::copy(templateDir + "/" + projectType + "/" + "library.cpp",
+                          targetSourceDirPath,
+                          std::filesystem::copy_options::overwrite_existing);
+    std::filesystem::copy(templateDir + "/" + projectType + "/" + "library.h",
+                          targetIncludeDirPath,
+                          std::filesystem::copy_options::overwrite_existing);
+  }
+
   return 0;
 }
